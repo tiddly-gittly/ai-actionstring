@@ -1,0 +1,82 @@
+caption: <<lingo ShowControlPanel $:/plugins/linonetwo/ai-actionstring/language/>>
+tags: $:/tags/Actions
+title: $:/plugins/linonetwo/ai-actionstring/Qwen
+
+\procedure qwenTextGenerate(promptValue)
+
+  \procedure completion()
+    \import [subfilter{$:/core/config/GlobalImportFilter}]
+    <$action-log msg="In completion"/>
+    <!-- Success -->
+    <$list filter="[<status>compare:number:gteq[200]compare:number:lteq[299]]" variable="ignore">
+      <$action-log msg="Generated text" text={{{ [<data>jsonget[output],[text]trim[]] }}}/>
+      <!-- Save the generated text -->
+      <$action-createtiddler $basetitle="$:/temp/TestQwenAPI/result" $overwrite="yes" text={{{ [<data>jsonget[output],[text]trim[]] }}}/>
+    </$list>
+    <!-- Failure -->
+    <$list filter="[<status>compare:number:lt[200]] [<status>compare:number:gt[299]]" variable="ignore">
+      <$action-log msg="API request failed" status=<<status>> statusText=<<statusText>> error=<<error>>/>
+    </$list>
+  \end completion
+
+  \procedure request-url()
+  https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+  \end request-url
+
+  \procedure request-body()
+  {
+    "model": "qwen-max",
+    "input": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are a professional translator, specializing in using AI tools to translate the content I input. Target language: Chinese. Optimization points: grammar correction, conforming to normal Chinese expression, adapting to Chinese culture. Requirement: Try to use the professional terms in the file I uploaded, but if there is a serious conflict in meaning, do not adhere to the translation in the file. Special attention: Maintain the original meaning, optimize language fluency and accuracy. This is content from the game CDDA Cataclysm, ensure it fits a world after a zombie virus outbreak. Only output the translated content, do not provide any explanation."
+        },
+        {
+          "role": "user",
+          "content": "<<promptValue>>\n\nTranslation:"
+        }
+      ]
+    },
+    "max_tokens": 100,
+    "temperature": 0.7
+  }
+  \end request-body
+
+  <$wikify name="url" text=<<request-url>>>
+    <$wikify name="body" text=<<request-body>>>
+      <$let apikey={{$:/plugins/linonetwo/ai-actionstring/configs/QwenAPIKey}}>
+        <$action-sendmessage
+          $message="tm-http-request"
+          url=<<url>>
+          method="POST"
+          header-Content-Type="application/json"
+          header-Authorization=`Bearer $(apikey)$`
+          body=<<body>>
+          bind-status="$:/temp/qwen/status"
+          bind-progress="$:/temp/qwen/progress"
+          oncompletion=<<completion>>
+        />
+      </$let>
+    </$wikify>
+  </$wikify>
+
+\end qwenTextGenerate
+
+\procedure display-input()
+  <$edit-text tiddler="$:/temp/TestQwenAPI/prompt" tag="input" placeholder="Please enter the text to translate"/>
+  <$button>
+    Translate
+    <$macrocall $name="qwenTextGenerate" promptValue={{$:/temp/TestQwenAPI/prompt}} />
+  </$button>
+\end display-input
+
+!! Qwen Translation API Call Example
+
+<<display-input>>
+
+<$macrocall $name="qwenTextGenerate" promptValue="Please enter the text to translate" />
+
+!! Result
+
+{{$:/temp/TestQwenAPI/result}}
