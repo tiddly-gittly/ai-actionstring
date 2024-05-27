@@ -1,0 +1,9 @@
+title: $:/plugins/linonetwo/ai-actionstring/language/en-GB/Readme
+
+\define lingo-base() $:/plugins/linonetwo/ai-actionstring/language/
+
+! <<lingo Name>>
+
+<<lingo Description>>
+
+Write readme here.
